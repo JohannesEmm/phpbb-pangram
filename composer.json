@@ -1,0 +1,26 @@
+{
+    "name": "claude/pangram",
+    "type": "phpbb-extension",
+    "description": "Checks first posts for AI content via Pangram API; auto-approves humans, auto-bans AI",
+    "homepage": "https://www.norduserforum.com",
+    "version": "1.0.0",
+    "time": "2026-10-29",
+    "license": "GPL-2.0",
+    "authors": [
+        {
+            "name": "norduserforum",
+            "email": "info@norduserforum.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=7.2.0",
+        "phpbb/phpbb": ">=3.3.0"
+    },
+    "extra": {
+        "display-name": "Pangram AI Post Checker",
+        "soft-require": {
+            "phpbb/phpbb": ">=3.3.0,<4.0.0@dev"
+        }
+    }
+}

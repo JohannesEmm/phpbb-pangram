@@ -1,0 +1,66 @@
+<!-- INCLUDE overall_header.html -->
+
+<div id="acp">
+<div class="panel">
+    <div class="inner">
+        <div class="content">
+            <h1>{L_ACP_PANGRAM_TITLE}</h1>
+            <p>{L_ACP_PANGRAM_EXPLAIN}</p>
+
+            <form method="post" action="{U_ACTION}">
+                <fieldset>
+                    <legend>{L_ACP_PANGRAM_SETTINGS}</legend>
+
+                    <dl>
+                        <dt><label for="pangram_enabled">{L_ACP_PANGRAM_ENABLED}:</label></dt>
+                        <dd>
+                            <input type="checkbox" id="pangram_enabled" name="pangram_enabled" value="1"<!-- IF PANGRAM_ENABLED --> checked="checked"<!-- ENDIF --> />
+                        </dd>
+                    </dl>
+
+                    <dl>
+                        <dt><label for="pangram_api_key">{L_ACP_PANGRAM_API_KEY}:</label></dt>
+                        <dd>
+                            <input type="text" id="pangram_api_key" name="pangram_api_key" value="{PANGRAM_API_KEY}" size="70" style="font-family:monospace" />
+                            <p class="quick-note">{L_ACP_PANGRAM_API_KEY_EXPLAIN}</p>
+                        </dd>
+                    </dl>
+
+                    <dl>
+                        <dt><label for="pangram_approve_threshold">{L_ACP_PANGRAM_APPROVE_THRESHOLD}:</label></dt>
+                        <dd>
+                            <input type="number" id="pangram_approve_threshold" name="pangram_approve_threshold" value="{PANGRAM_APPROVE_THRESHOLD}" min="0" max="100" style="width:60px" /> %
+                            <p class="quick-note">{L_ACP_PANGRAM_APPROVE_THRESHOLD_EXPLAIN}</p>
+                        </dd>
+                    </dl>
+
+                    <dl>
+                        <dt><label for="pangram_ban_threshold">{L_ACP_PANGRAM_BAN_THRESHOLD}:</label></dt>
+                        <dd>
+                            <input type="number" id="pangram_ban_threshold" name="pangram_ban_threshold" value="{PANGRAM_BAN_THRESHOLD}" min="0" max="100" style="width:60px" /> %
+                            <p class="quick-note">{L_ACP_PANGRAM_BAN_THRESHOLD_EXPLAIN}</p>
+                        </dd>
+                    </dl>
+                </fieldset>
+
+                <fieldset class="submit-buttons">
+                    {S_FORM_TOKEN}
+                    <input type="submit" name="submit" value="{L_SUBMIT}" class="button1" />
+                </fieldset>
+            </form>
+
+            <div class="successbox" style="margin-top:20px">
+                <p><strong>How it works:</strong> When a user with 0 approved posts submits their first post and it goes into the moderation queue, this extension calls the Pangram API to check for AI-generated content.</p>
+                <ul style="margin:8px 0 0 20px">
+                    <li>AI score &le; <strong>{PANGRAM_APPROVE_THRESHOLD}%</strong> → post and user are automatically approved</li>
+                    <li>AI score &ge; <strong>{PANGRAM_BAN_THRESHOLD}%</strong> → user is permanently banned (by user_id and email), post stays in queue</li>
+                    <li>Between the two thresholds → post stays in queue for manual review</li>
+                </ul>
+                <p style="margin-top:8px">The API call adds up to ~15 seconds to the post submission for the poster. On timeout or API error the post is left in the queue silently.</p>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- INCLUDE overall_footer.html -->

@@ -1,0 +1,13 @@
+services:
+    claude.pangram.listener:
+        class: claude\pangram\event\listener
+        arguments:
+            - '@config'
+            - '@dbal.conn'
+            - '@content.visibility'
+            - '@log'
+            - '@user'
+            - '%core.root_path%'
+            - '%core.php_ext%'
+        tags:
+            - { name: event.listener }
