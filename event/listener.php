@@ -167,7 +167,7 @@ class listener implements EventSubscriberInterface
         {
             if ($post_visibility === ITEM_UNAPPROVED)
             {
-                $this->approve_post_and_user($post_id, $topic_id, $forum_id, $poster_id, $mode, $user_row);
+                $this->approve_post_and_user($post_id, $topic_id, $forum_id, $poster_id, $mode, $user_row, $ai_pct);
             }
             // else: post already live (normal user), nothing to do
         }
@@ -280,7 +280,7 @@ class listener implements EventSubscriberInterface
     // Approve
     // -----------------------------------------------------------------------
 
-    protected function approve_post_and_user($post_id, $topic_id, $forum_id, $poster_id, $mode, $user_row)
+    protected function approve_post_and_user($post_id, $topic_id, $forum_id, $poster_id, $mode, $user_row, $ai_pct)
     {
         $is_starter = ($mode === 'post');  // true if this is a new topic
 
@@ -313,6 +313,20 @@ class listener implements EventSubscriberInterface
                 WHERE user_id = ' . $poster_id;
             $this->db->sql_query($sql);
         }
+
+        // Log the auto-approval to the moderator log
+        $this->log->add(
+            'mod',
+            ANONYMOUS,
+            '0.0.0.0',
+            'LOG_PANGRAM_APPROVE',
+            time(),
+            array($user_row['username'], $ai_pct),
+            0,
+            $topic_id,
+            $post_id,
+            $poster_id
+        );
     }
 
     // -----------------------------------------------------------------------
@@ -382,6 +396,7 @@ class listener implements EventSubscriberInterface
         $posts  = $this->db->sql_fetchrowset($result);
         $this->db->sql_freeresult($result);
 
+        $post_ids = array();
         foreach ($posts as $p)
         {
             $this->content_visibility->set_post_visibility(
@@ -395,6 +410,26 @@ class listener implements EventSubscriberInterface
                 ((int) $p['post_id'] === (int) $p['topic_first_post_id']),
                 true
             );
+            $post_ids[] = (int) $p['post_id'];
+        }
+
+        // Delete the "post approval request" notifications for all deleted posts
+        // so moderators don't see stale queue notifications for banned spam accounts
+        if (!empty($post_ids))
+        {
+            $sql = 'SELECT notification_type_id FROM ' . NOTIFICATION_TYPES_TABLE . '
+                WHERE notification_type_name = \'notification.type.post_in_queue\'';
+            $result   = $this->db->sql_query($sql);
+            $type_row = $this->db->sql_fetchrow($result);
+            $this->db->sql_freeresult($result);
+
+            if ($type_row)
+            {
+                $sql = 'DELETE FROM ' . NOTIFICATIONS_TABLE . '
+                    WHERE notification_type_id = ' . (int) $type_row['notification_type_id'] . '
+                      AND ' . $this->db->sql_in_set('item_id', $post_ids);
+                $this->db->sql_query($sql);
+            }
         }
 
         // Write to phpBB moderator log so the action is visible in ACP > Logs > Moderator Log

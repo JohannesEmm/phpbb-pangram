@@ -29,5 +29,6 @@ $lang = array_merge($lang, array(
 
     'ACP_PANGRAM_THRESHOLD_ERROR' => 'The approve threshold must be lower than the ban threshold.',
 
-    'LOG_PANGRAM_BAN' => '<strong>User banned:</strong> %1$s (Pangram detected %2$d%% AI)',
+    'LOG_PANGRAM_APPROVE' => '<strong>Post auto-approved:</strong> %1$s (Pangram detected %2$d%% AI)',
+    'LOG_PANGRAM_BAN'     => '<strong>User banned:</strong> %1$s (Pangram detected %2$d%% AI)',
 ));
