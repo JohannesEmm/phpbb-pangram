@@ -169,7 +169,13 @@ class listener implements EventSubscriberInterface
             {
                 $this->approve_post_and_user($post_id, $topic_id, $forum_id, $poster_id, $mode, $user_row, $ai_pct);
             }
-            // else: post already live (normal user), nothing to do
+            else
+            {
+                // Post already live (admin-created normal user) — log the clear result
+                $this->log->add('mod', ANONYMOUS, '0.0.0.0', 'LOG_PANGRAM_APPROVE',
+                    time(), array($user_row['username'], $ai_pct),
+                    $forum_id, $topic_id, $post_id, $poster_id);
+            }
         }
         else if ($ai_pct >= $ban_threshold)
         {
@@ -188,9 +194,15 @@ class listener implements EventSubscriberInterface
                     true
                 );
             }
-            $this->ban_user($poster_id, $user_row, $post_id, $topic_id, $ai_pct);
+            $this->ban_user($poster_id, $user_row, $post_id, $topic_id, $forum_id, $ai_pct);
         }
-        // else: middle ground → manual review
+        else
+        {
+            // Middle ground — left in queue for manual review, log the score
+            $this->log->add('mod', ANONYMOUS, '0.0.0.0', 'LOG_PANGRAM_REVIEW',
+                time(), array($user_row['username'], $ai_pct),
+                $forum_id, $topic_id, $post_id, $poster_id);
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -315,25 +327,16 @@ class listener implements EventSubscriberInterface
         }
 
         // Log the auto-approval to the moderator log
-        $this->log->add(
-            'mod',
-            ANONYMOUS,
-            '0.0.0.0',
-            'LOG_PANGRAM_APPROVE',
-            time(),
-            array($user_row['username'], $ai_pct),
-            0,
-            $topic_id,
-            $post_id,
-            $poster_id
-        );
+        $this->log->add('mod', ANONYMOUS, '0.0.0.0', 'LOG_PANGRAM_APPROVE',
+            time(), array($user_row['username'], $ai_pct),
+            $forum_id, $topic_id, $post_id, $poster_id);
     }
 
     // -----------------------------------------------------------------------
     // Ban
     // -----------------------------------------------------------------------
 
-    protected function ban_user($poster_id, $user_row, $post_id, $topic_id, $ai_pct)
+    protected function ban_user($poster_id, $user_row, $post_id, $topic_id, $forum_id, $ai_pct)
     {
         $admin_reason = 'AI-generated content detected by Pangram (score: ' . $ai_pct . '%)';
         $user_reason  = 'Your account has been banned for posting AI-generated content.';
@@ -433,18 +436,9 @@ class listener implements EventSubscriberInterface
         }
 
         // Write to phpBB moderator log so the action is visible in ACP > Logs > Moderator Log
-        $this->log->add(
-            'mod',
-            ANONYMOUS,
-            '0.0.0.0',
-            'LOG_PANGRAM_BAN',
-            time(),
-            array($user_row['username'], $ai_pct),
-            0,
-            $topic_id,
-            $post_id,
-            $poster_id
-        );
+        $this->log->add('mod', ANONYMOUS, '0.0.0.0', 'LOG_PANGRAM_BAN',
+            time(), array($user_row['username'], $ai_pct),
+            $forum_id, $topic_id, $post_id, $poster_id);
     }
 
     // -----------------------------------------------------------------------
