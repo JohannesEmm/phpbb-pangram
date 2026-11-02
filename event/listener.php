@@ -326,6 +326,9 @@ class listener implements EventSubscriberInterface
             $this->db->sql_query($sql);
         }
 
+        // Remove queue notifications — post is approved, mods don't need to act
+        $this->delete_queue_notifications(array($post_id), array($topic_id));
+
         // Log the auto-approval to the moderator log
         $this->log->add('mod', ANONYMOUS, '0.0.0.0', 'LOG_PANGRAM_APPROVE',
             time(), array($user_row['username'], $ai_pct),
@@ -399,7 +402,8 @@ class listener implements EventSubscriberInterface
         $posts  = $this->db->sql_fetchrowset($result);
         $this->db->sql_freeresult($result);
 
-        $post_ids = array();
+        $post_ids  = array();
+        $topic_ids = array();
         foreach ($posts as $p)
         {
             $this->content_visibility->set_post_visibility(
@@ -413,27 +417,12 @@ class listener implements EventSubscriberInterface
                 ((int) $p['post_id'] === (int) $p['topic_first_post_id']),
                 true
             );
-            $post_ids[] = (int) $p['post_id'];
+            $post_ids[]  = (int) $p['post_id'];
+            $topic_ids[] = (int) $p['topic_id'];
         }
 
-        // Delete the "post approval request" notifications for all deleted posts
-        // so moderators don't see stale queue notifications for banned spam accounts
-        if (!empty($post_ids))
-        {
-            $sql = 'SELECT notification_type_id FROM ' . NOTIFICATION_TYPES_TABLE . '
-                WHERE notification_type_name = \'notification.type.post_in_queue\'';
-            $result   = $this->db->sql_query($sql);
-            $type_row = $this->db->sql_fetchrow($result);
-            $this->db->sql_freeresult($result);
-
-            if ($type_row)
-            {
-                $sql = 'DELETE FROM ' . NOTIFICATIONS_TABLE . '
-                    WHERE notification_type_id = ' . (int) $type_row['notification_type_id'] . '
-                      AND ' . $this->db->sql_in_set('item_id', $post_ids);
-                $this->db->sql_query($sql);
-            }
-        }
+        // Remove all queue notifications so mods don't see stale approval requests
+        $this->delete_queue_notifications($post_ids, array_unique($topic_ids));
 
         // Write to phpBB moderator log so the action is visible in ACP > Logs > Moderator Log
         $this->log->add('mod', ANONYMOUS, '0.0.0.0', 'LOG_PANGRAM_BAN',
@@ -444,6 +433,51 @@ class listener implements EventSubscriberInterface
     // -----------------------------------------------------------------------
     // Helpers
     // -----------------------------------------------------------------------
+
+    /**
+     * Delete all queue-type notifications for the given post and topic IDs.
+     * Covers all variants: notification.type.post_in_queue, post_in_queue,
+     * topic_in_queue, and any extension-prefixed variants (e.g. Akismet).
+     */
+    protected function delete_queue_notifications(array $post_ids, array $topic_ids)
+    {
+        // Fetch every notification type whose name contains '_in_queue'
+        $sql = 'SELECT notification_type_id, notification_type_name
+            FROM ' . NOTIFICATION_TYPES_TABLE . "
+            WHERE notification_type_name LIKE '%_in_queue'";
+        $result = $this->db->sql_query($sql);
+
+        $post_type_ids  = array();
+        $topic_type_ids = array();
+        while ($row = $this->db->sql_fetchrow($result))
+        {
+            if (strpos($row['notification_type_name'], 'topic_in_queue') !== false)
+            {
+                $topic_type_ids[] = (int) $row['notification_type_id'];
+            }
+            else
+            {
+                $post_type_ids[] = (int) $row['notification_type_id'];
+            }
+        }
+        $this->db->sql_freeresult($result);
+
+        if (!empty($post_type_ids) && !empty($post_ids))
+        {
+            $sql = 'DELETE FROM ' . NOTIFICATIONS_TABLE . '
+                WHERE ' . $this->db->sql_in_set('notification_type_id', $post_type_ids) . '
+                  AND ' . $this->db->sql_in_set('item_id', $post_ids);
+            $this->db->sql_query($sql);
+        }
+
+        if (!empty($topic_type_ids) && !empty($topic_ids))
+        {
+            $sql = 'DELETE FROM ' . NOTIFICATIONS_TABLE . '
+                WHERE ' . $this->db->sql_in_set('notification_type_id', $topic_type_ids) . '
+                  AND ' . $this->db->sql_in_set('item_id', $topic_ids);
+            $this->db->sql_query($sql);
+        }
+    }
 
     protected function clean_post_text($text)
     {
