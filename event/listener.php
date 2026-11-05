@@ -13,6 +13,7 @@ use phpbb\config\config;
 use phpbb\content_visibility;
 use phpbb\db\driver\driver_interface as db_driver;
 use phpbb\log\log_interface;
+use phpbb\template\template;
 use phpbb\user;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 
@@ -23,6 +24,7 @@ class listener implements EventSubscriberInterface
     protected $content_visibility;
     protected $log;
     protected $user;
+    protected $template;
     protected $phpbb_root_path;
     protected $php_ext;
 
@@ -34,6 +36,7 @@ class listener implements EventSubscriberInterface
         content_visibility $content_visibility,
         log_interface $log,
         user $user,
+        template $template,
         $phpbb_root_path,
         $php_ext
     )
@@ -43,6 +46,7 @@ class listener implements EventSubscriberInterface
         $this->content_visibility = $content_visibility;
         $this->log                = $log;
         $this->user               = $user;
+        $this->template           = $template;
         $this->phpbb_root_path    = $phpbb_root_path;
         $this->php_ext            = $php_ext;
     }
@@ -63,6 +67,23 @@ class listener implements EventSubscriberInterface
     {
         // Load on every page so LOG_PANGRAM_BAN resolves in both ACP and MCP log views
         $this->user->add_lang_ext('claude/pangram', 'acp/pangram');
+
+        // Expose S_IS_GLOBAL_MOD to templates (used for the Mod Log navbar link)
+        $user_id = isset($this->user->data['user_id']) ? (int) $this->user->data['user_id'] : 0;
+        $is_global_mod = false;
+        if ($user_id > 1)  // skip anonymous (1) and guests
+        {
+            $sql = 'SELECT 1
+                FROM ' . USER_GROUP_TABLE . ' ug
+                JOIN ' . GROUPS_TABLE . ' g ON g.group_id = ug.group_id
+                WHERE g.group_name = \'GLOBAL_MODERATORS\'
+                  AND ug.user_id = ' . $user_id . '
+                  AND ug.user_pending = 0';
+            $result = $this->db->sql_query($sql);
+            $is_global_mod = (bool) $this->db->sql_fetchrow($result);
+            $this->db->sql_freeresult($result);
+        }
+        $this->template->assign_var('S_IS_GLOBAL_MOD', $is_global_mod);
     }
 
     // -----------------------------------------------------------------------
