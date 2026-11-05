@@ -276,6 +276,14 @@ class listener implements EventSubscriberInterface
 
             if ($result['stage'] === 'STAGE_SUCCESS')
             {
+                if (isset($result['fraction_human']))
+                {
+                    // Use combined non-human score (AI-generated + AI-assisted).
+                    // fraction_ai alone misses AI-assisted / humanized content, which
+                    // scores low on fraction_ai but high on fraction_ai_assisted.
+                    // The Pangram website shows this same combined figure.
+                    return 1.0 - (float) $result['fraction_human'];
+                }
                 return isset($result['fraction_ai']) ? (float) $result['fraction_ai'] : null;
             }
 
