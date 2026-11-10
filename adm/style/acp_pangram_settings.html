@@ -41,6 +41,23 @@
                             <p class="quick-note">{L_ACP_PANGRAM_BAN_THRESHOLD_EXPLAIN}</p>
                         </dd>
                     </dl>
+
+                    <dl>
+                        <dt>{L_ACP_PANGRAM_BAN_DELETE_MODE}:</dt>
+                        <dd>
+                            <label><input type="radio" name="pangram_ban_delete_mode" value="0"<!-- IF not PANGRAM_BAN_DELETE_MODE --> checked="checked"<!-- ENDIF --> /> {L_ACP_PANGRAM_BAN_DELETE_SOFT}</label>&nbsp;&nbsp;
+                            <label><input type="radio" name="pangram_ban_delete_mode" value="1"<!-- IF PANGRAM_BAN_DELETE_MODE --> checked="checked"<!-- ENDIF --> /> {L_ACP_PANGRAM_BAN_DELETE_PERMANENT}</label>
+                            <p class="quick-note">{L_ACP_PANGRAM_BAN_DELETE_MODE_EXPLAIN}</p>
+                        </dd>
+                    </dl>
+
+                    <dl>
+                        <dt><label for="pangram_ban_keep_in_queue">{L_ACP_PANGRAM_BAN_KEEP_IN_QUEUE}:</label></dt>
+                        <dd>
+                            <input type="checkbox" id="pangram_ban_keep_in_queue" name="pangram_ban_keep_in_queue" value="1"<!-- IF PANGRAM_BAN_KEEP_IN_QUEUE --> checked="checked"<!-- ENDIF --> />
+                            <p class="quick-note">{L_ACP_PANGRAM_BAN_KEEP_IN_QUEUE_EXPLAIN}</p>
+                        </dd>
+                    </dl>
                 </fieldset>
 
                 <fieldset class="submit-buttons">
@@ -53,7 +70,7 @@
                 <p><strong>How it works:</strong> When a user with 0 approved posts submits their first post and it goes into the moderation queue, this extension calls the Pangram API to check for AI-generated content.</p>
                 <ul style="margin:8px 0 0 20px">
                     <li>AI score &le; <strong>{PANGRAM_APPROVE_THRESHOLD}%</strong> → post and user are automatically approved</li>
-                    <li>AI score &ge; <strong>{PANGRAM_BAN_THRESHOLD}%</strong> → user is permanently banned (by user_id and email), post stays in queue</li>
+                    <li>AI score &ge; <strong>{PANGRAM_BAN_THRESHOLD}%</strong> → user is permanently banned (by user_id and email), post is soft- or permanently deleted per setting below</li>
                     <li>Between the two thresholds → post stays in queue for manual review</li>
                 </ul>
                 <p style="margin-top:8px">The API call adds up to ~15 seconds to the post submission for the poster. On timeout or API error the post is left in the queue silently.</p>

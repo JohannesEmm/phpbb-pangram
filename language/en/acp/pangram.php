@@ -25,7 +25,15 @@ $lang = array_merge($lang, array(
     'ACP_PANGRAM_APPROVE_THRESHOLD_EXPLAIN' => 'Posts where Pangram\'s fraction_ai (×100) is at or below this value are automatically approved and the user is activated. Default: 10',
 
     'ACP_PANGRAM_BAN_THRESHOLD'         => 'Auto-ban if AI score above',
-    'ACP_PANGRAM_BAN_THRESHOLD_EXPLAIN' => 'Posts where Pangram\'s fraction_ai (×100) is at or above this value trigger a permanent ban by user_id and email. Default: 90',
+    'ACP_PANGRAM_BAN_THRESHOLD_EXPLAIN' => 'Posts where the combined AI score (AI-generated + AI-assisted) is at or above this value trigger a permanent ban by user_id and email. Default: 90',
+
+    'ACP_PANGRAM_BAN_DELETE_MODE'            => 'Post deletion on ban',
+    'ACP_PANGRAM_BAN_DELETE_SOFT'            => 'Soft delete (default)',
+    'ACP_PANGRAM_BAN_DELETE_PERMANENT'       => 'Permanent delete',
+    'ACP_PANGRAM_BAN_DELETE_MODE_EXPLAIN'    => 'Soft delete hides the post/topic (reversible). Permanent delete removes it from the database entirely, including search index.',
+
+    'ACP_PANGRAM_BAN_KEEP_IN_QUEUE'         => 'Keep post in mod notification queue',
+    'ACP_PANGRAM_BAN_KEEP_IN_QUEUE_EXPLAIN' => 'If unchecked (default), queue notifications are removed when a user is banned so mods don\'t see a stale approval request. Check this if you want mods to still see the banned post in their notification queue.',
 
     'ACP_PANGRAM_THRESHOLD_ERROR' => 'The approve threshold must be lower than the ban threshold.',
 

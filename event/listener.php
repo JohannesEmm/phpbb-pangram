@@ -421,7 +421,7 @@ class listener implements EventSubscriberInterface
             WHERE user_id = ' . $poster_id;
         $this->db->sql_query($sql);
 
-        // Soft-delete all posts by this user (queue + any approved)
+        // Collect all posts by this user that are not already deleted
         $sql = 'SELECT p.post_id, p.topic_id, p.forum_id, t.topic_first_post_id
             FROM ' . POSTS_TABLE . ' p
             LEFT JOIN ' . TOPICS_TABLE . ' t ON t.topic_id = p.topic_id
@@ -435,23 +435,52 @@ class listener implements EventSubscriberInterface
         $topic_ids = array();
         foreach ($posts as $p)
         {
-            $this->content_visibility->set_post_visibility(
-                ITEM_DELETED,
-                (int) $p['post_id'],
-                (int) $p['topic_id'],
-                (int) $p['forum_id'],
-                $poster_id,
-                time(),
-                '',
-                ((int) $p['post_id'] === (int) $p['topic_first_post_id']),
-                true
-            );
             $post_ids[]  = (int) $p['post_id'];
             $topic_ids[] = (int) $p['topic_id'];
         }
+        $topic_ids_unique = array_unique($topic_ids);
 
-        // Remove all queue notifications so mods don't see stale approval requests
-        $this->delete_queue_notifications($post_ids, array_unique($topic_ids));
+        $permanent_delete = !empty($this->config['pangram_ban_delete_mode']);
+
+        if ($permanent_delete)
+        {
+            // Permanently delete topics (which also removes all their posts, search
+            // index entries and updates forum stats via phpBB's own function).
+            if (!empty($topic_ids_unique))
+            {
+                if (!function_exists('delete_topics'))
+                {
+                    include($this->phpbb_root_path . 'includes/functions_admin.' . $this->php_ext);
+                }
+                delete_topics('topic_id', $topic_ids_unique);
+            }
+            // Always clean notifications after permanent delete — the items are gone.
+            $this->delete_queue_notifications($post_ids, $topic_ids_unique);
+        }
+        else
+        {
+            // Soft-delete (default): mark posts as ITEM_DELETED, keeps them reversible.
+            foreach ($posts as $p)
+            {
+                $this->content_visibility->set_post_visibility(
+                    ITEM_DELETED,
+                    (int) $p['post_id'],
+                    (int) $p['topic_id'],
+                    (int) $p['forum_id'],
+                    $poster_id,
+                    time(),
+                    '',
+                    ((int) $p['post_id'] === (int) $p['topic_first_post_id']),
+                    true
+                );
+            }
+
+            // Remove queue notifications unless configured to keep them
+            if (empty($this->config['pangram_ban_keep_in_queue']))
+            {
+                $this->delete_queue_notifications($post_ids, $topic_ids_unique);
+            }
+        }
 
         // Write to phpBB moderator log so the action is visible in ACP > Logs > Moderator Log
         $this->log->add('mod', ANONYMOUS, '0.0.0.0', 'LOG_PANGRAM_BAN',
